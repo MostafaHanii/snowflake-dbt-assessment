@@ -1,15 +1,19 @@
-Welcome to your new dbt project!
-
-### Using the starter project
-
-Try running the following commands:
-- dbt run
-- dbt test
-
-
-### Resources:
-- Learn more about dbt [in the docs](https://docs.getdbt.com/docs/introduction)
-- Check out [Discourse](https://discourse.getdbt.com/) for commonly asked questions and answers
-- Join the [chat](https://community.getdbt.com/) on Slack for live discussions and support
-- Find [dbt events](https://events.getdbt.com) near you
-- Check out [the blog](https://blog.getdbt.com/) for the latest news on dbt's development and best practices
+Data Transformation Pipeline Implementation: TPC-H Dataset utilizing dbt and Snowflake (snowflake_tpch_demo)This repository documents a Data Build Tool (dbt) project meticulously engineered to process raw TPC-H sample data, provisioned via Snowflake, into segregated Silver and Gold layer data models. This structure adheres strictly to the principles of the Medallion Architecture pattern, optimizing both data quality and downstream analytical accessibility.The project serves as a comprehensive demonstration of core data engineering proficiencies, encompassing dbt environment setup, development of complex SQL transformations, deployment of rigorous data quality testing protocols, and successful integration with a professional version control system (GitHub).1. Project Architecture and Model HierarchyThe established pipeline extracts data from read-only sources and persists the transformed output into two analytical tables, which are subsequently housed within a dedicated, writable database and schema in the Snowflake data warehouse:LayerModelDescriptionMaterializationBronzetpch_sf1 SourcesRepresentation of the external, immutable source dataset, comprising the foundational TPC-H entities: customer, orders, and lineitem.Not Applicable (External Reference)Silverstg_ordersFunctions as a staging layer for cleaned and standardized data. This model executes a join between raw orders and customer data, calculates derived attributes such as order_year, and incorporates initial data quality assertions.TableGoldcustomer_revenueConstitutes the final, analytical aggregation layer. This model computes and aggregates the total lifetime revenue for each customer entity, thereby establishing a high-value dataset suitable for immediate consumption by Business Intelligence (BI) platforms.Table2. Environmental Configuration and PrerequisitesSuccessful execution and deployment of this project necessitate the presence and correct configuration of the following core components:Snowflake Data Warehouse Access: A Snowflake account is a mandatory prerequisite. The assigned execution role must possess privileges sufficient to manage data objects (including the creation of databases, schemas, and virtual warehouses), typically requiring an ACCOUNTADMIN or an equivalently privileged custom role.dbt-Snowflake Adapter: The local environment requires installation of the dbt Command Line Interface (CLI) and its specific adapter for Snowflake integration.2.1. Snowflake Environment SetupPrior to initiating the dbt execution, confirmation of the following infrastructural setup within the Snowflake environment is essential:Virtual Warehouse: A functional Virtual Warehouse (e.g., DEV_WH) must be actively operational and configured with an appropriate auto-suspend policy to manage costs.Target Database/Schema: A dedicated, writable database (ANALYTICS_DB) and schema (ANALYTICS_DEV) must be explicitly provisioned to house the transformed models generated during the build process.Source Data Access: The dbt execution role must possess authenticated access and query privileges for the SNOWFLAKE_SAMPLE_DATA shared database.2.2. dbt Profile Definition (profiles.yml)The connection parameters for the project are defined within the snowflake_tpch_demo profile. The local ~/.dbt/profiles.yml file must be updated to reflect accurate, authenticable Snowflake credentials:snowflake_tpch_demo:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      account: [YOUR_SNOWFLAKE_ACCOUNT_IDENTIFIER] 
+      role: SYSADMIN                 # Recommended administrative or dedicated ETL role
+      username: [YOUR_USERNAME]
+      password: [YOUR_PASSWORD]
+      warehouse: DEV_WH              # Must correspond to an active Virtual Warehouse
+      database: ANALYTICS_DB         # Destination database for persistent model output
+      schema: ANALYTICS_DEV          # Destination schema for persistent model output
+      threads: 4
+3. Project Execution ProtocolThe following sequence of commands, executed from the project's root directory, defines the standard operational protocol for building, testing, and documenting the data pipeline:3.1. Connection ValidationThe dbt debug command must be executed to confirm successful authentication and verify the established connectivity between dbt and the configured Snowflake profile:dbt debug
+3.2. Model MaterializationThe dbt run command initiates the transformation sequence, resulting in the creation of the stg_orders and customer_revenue tables within the designated target Snowflake schema.dbt run
+3.3. Data Quality Assurance TestingThe dbt test command executes all predefined data quality checks, including the unique and not_null assertions, as stipulated within the project's YAML configuration files.dbt test
+3.4. Documentation GenerationThe dbt docs generate command facilitates the production of the project's comprehensive documentation website, which provides essential lineage graphs and detailed column-level metadata.dbt docs generate
+dbt docs serve # Command to launch the documentation site in a local web browser
+4. Detailed Model Specifications (Bronze → Gold)sources.ymlThis foundational configuration file defines the initial data boundary, creating abstract references to the raw Snowflake tables (customer, orders, lineitem) under the logical source identifier tpch_sf1.stg_orders (Silver Layer)This intermediate model is constructed via an equijoin operation between the orders and customer sources, predicated on the shared o_custkey/c_custkey attribute.Key Transformations: The process includes projecting the customer_name and deriving the order_year from the o_orderdate field.Data Quality: Data integrity is verified by enforcing unique and not_null constraints on the primary transaction identifier, o_orderkey.customer_revenue (Gold Layer)This model is dedicated to quantifying the cumulative total lifetime revenue attributable to each customer entity.Key Logic: The calculation involves a join between orders and lineitem, followed by the application of the standardized TPC-H revenue formula: ∑(l_extendedprice⋅(1−l_discount)).Aggregation: Data is systematically aggregated based on the customer primary key (c_custkey) and the associated customer_name.Data Quality: A mandatory not_null constraint is imposed upon the primary entity identifier, c_custkey.
