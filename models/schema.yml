@@ -2,17 +2,69 @@ version: 2
 
 models:
   - name: stg_orders
-    description: "silver layer model"
+    description: "Silver layer model combining customer and order header data. All columns are fully qualified and cleaned."
     columns:
-    - name: o_orderkey
-      tests:
-        - unique
-        - not_null
-
+      - name: o_orderkey
+        description: "Primary key for the order. Used to link to Lineitem."
+        tests:
+          - unique
+          - not_null
+      - name: o_custkey
+        description: "Foreign key linking to the Customer dimension table."
+        tests:
+          - not_null
+          - relationships:
+              to: source('tpch_sf1', 'customer')
+              field: C_CUSTKEY
+      - name: c_name
+        description: "Customer's full name, pulled directly from the source Customer table."
+      - name: total_price
+        description: "The total price of the order."
+      - name: o_orderstatus
+        description: "Current status of the order (e.g., F, O, P)."
+      - name: o_orderdate
+        description: "The date the order was placed."
+      - name: order_year
+        description: "The calendar year the order was placed, derived from o_orderdate."
+        
   - name: customer_revenue
-    description: "gold layer model"
+    description: "Gold layer model calculating the lifetime total realized revenue for every unique customer, ready for BI consumption."
     columns:
-    - name: c_custkey
-      tests:
-        - not_null
-        - unique
+      - name: C_CUSTKEY
+        description: "Primary key for this aggregation, matching the customer's unique ID."
+        tests:
+          - not_null
+          - unique
+      - name: C_NAME
+        description: "Customer's full name, pulled from the staging model."
+      - name: TOTAL_REVENUE
+        description: "The sum of all realized revenue (extendedprice * (1 - discount)) across all orders for this customer."
+        tests:
+          - not_null
+          
+  - name: customer_revenue_nation
+    description: "Gold layer model that segments the total customer revenue by the customer's home nation for geographical analysis."
+    columns:
+      - name: CUSTOMER_NATION
+        description: "The name of the customer's home nation."
+        tests:
+          - not_null
+      - name: TOTAL_REVENUE_BY_NATION
+        description: "Total aggregated revenue from all customers within this nation."
+      - name: UNIQUE_CUSTOMERS_IN_NATION
+        description: "Count of unique customers contributing to the revenue in this nation."
+
+  - name: customer_revenue_yearly
+    description: "Gold layer model providing aggregated order metrics (revenue, order count, quantity) at the annual level for time-series reporting."
+    columns:
+      - name: ORDER_YEAR
+        description: "The year the orders were placed."
+        tests:
+          - not_null
+          - unique
+      - name: TOTAL_ORDERS
+        description: "Total number of distinct orders placed in that year."
+      - name: YEARLY_TOTAL_REVENUE
+        description: "Total realized revenue for all orders in that year."
+      - name: YEARLY_TOTAL_QUANTITY_SOLD
+        description: "Total quantity of items sold in that year."

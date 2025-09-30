@@ -14,4 +14,6 @@ sources:
 
     - name: lineitem
       description: "the table storing line_item details for each order."
+    - name: nation
+      description: "the table storing the nation details "
       
