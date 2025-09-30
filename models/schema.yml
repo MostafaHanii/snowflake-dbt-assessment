@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: stg_orders
+    description: "silver layer model"
+    columns:
+    - name: o_orderkey
+      tests:
+        - unique
+        - not_null
+
+  - name: customer_revenue
+    description: "gold layer model"
+    columns:
+    - name: c_custkey
+      tests:
+        - not_null
+        - unique

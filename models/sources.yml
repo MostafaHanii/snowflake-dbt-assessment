@@ -1,0 +1,17 @@
+version: 2
+sources:
+  - name: tpch_sf1
+    database: SNOWFLAKE_SAMPLE_DATA
+    schema: TPCH_SF1
+    description: "this is the first model"
+
+    tables: 
+    - name: customer
+      description: "the table storing TPCH customers."
+
+    - name: orders
+      description: "the table storing orders placed by customers."
+
+    - name: lineitem
+      description: "the table storing line_item details for each order."
+      
